@@ -1,51 +1,102 @@
-/**
- * Created by Isaac on 6/5/2015.
- */
 var chai = require('chai'),
     expect = chai.expect,
-    validatorWith = require('../lib/validator'),
-    nonPositiveValidationRule = require('../lib/rules/nonPositive'),
-    nonDivisibleValidationRule = require('../lib/rules/nonDivisible');
+    sinon = require('sinon'),
+    factoryWithConfiguration = require('../lib/factory');
 
-describe('A validator', function () {
-    var validator;
-    context('with the default validation rules', function(){
-        beforeEach(function(){
-            validator = validatorWith([
-                nonPositiveValidationRule,
-                nonDivisibleValidationRule(3, 'error.three'),
-                nonDivisibleValidationRule(5, 'error.five')
+
+
+describe('A validation', function () {
+    var validator, configuration;
+    context('using the default validation rules:', function () {
+        beforeEach(function () {
+            configuration = sinon.stub();
+            configuration.returns([
+                {type: 'nonPositive'},
+                {type: 'nonDivisible', options: {divisor: 3, error: 'error.three'}},
+                {type: 'nonDivisible', options: {divisor: 5, error: 'error.five'}}
             ]);
+            var newValidator = factoryWithConfiguration(configuration);
+            validator = newValidator('default');
         });
 
-        it('will return no errors for valid numbers', function(){
+        it('will access the configuration to get the validation rules', function () {
+            expect(configuration).to.have.been.calledOnce;
+            expect(configuration.calledWithExactly('default')).to.be.ok;
+        });
+
+        it('for valid numbers, will return no errors', function () {
             expect(validator(7)).to.be.empty;
         });
 
-        describe('will include error.nonpositive for not strictly positive numbers', function () {
-            willInclude('error.nonpositive', 0);
-            willInclude('error.nonpositive', -2);
+        context('for not strictly positive numbers:', function () {
+            it('like 0, will include error.nonpositive', function () {
+                expect(validator(0)).to.include('error.nonpositive');
+            });
+
+            it('like -2, will include error.nonpositive', function () {
+                expect(validator(-2)).to.include('error.nonpositive');
+            });
         });
 
-        describe('will include error.three for divisible by 3 numbers', function () {
-            willInclude('error.three', 3);
-            willInclude('error.three', 6);
-            willInclude('error.three', 15);
+        context('for numbers divisible by 3:', function () {
+            it('like 3, will include error.three', function () {
+                expect(validator(3)).to.include('error.three');
+            });
 
+            it('like 15, will include error.three', function () {
+                expect(validator(15)).to.include('error.three');
+            });
         });
 
-        describe('will include error.five for divisible by 5 numbers', function () {
-            willInclude('error.five', 5);
-            willInclude('error.five', 10);
-            willInclude('error.five', 15);
+        context('for numbers divisible by 5:', function () {
+            it('like 5, will include error.five', function () {
+                expect(validator(5)).to.include('error.five');
+            });
+
+            it('like 15, will include error.five', function () {
+                expect(validator(15)).to.include('error.five');
+            });
+        });
+    });
+
+    context('using the alternative validation rules:', function () {
+        beforeEach(function () {
+            configuration = sinon.stub();
+            configuration.returns([
+                {type: 'nonPositive'},
+                {type: 'nonDivisible', options: {divisor: 11, error: 'error.eleven'}}
+            ]);
+            var newValidator = factoryWithConfiguration(configuration);
+            validator = newValidator('alternative');
+        });
+
+        it('will access the configuration to get the validation rules', function () {
+            expect(configuration).to.have.been.calledOnce;
+            expect(configuration.calledWithExactly('alternative')).to.be.ok;
+        });
+
+        it('for valid numbers, will return no errors', function () {
+            expect(validator(7)).to.be.empty;
+        });
+
+        context('for not strictly positive numbers:', function () {
+            it('like 0, will include error.nonpositive', function () {
+                expect(validator(0)).to.include('error.nonpositive');
+            });
+
+            it('like -2, will include error.nonpositive', function () {
+                expect(validator(-2)).to.include('error.nonpositive');
+            });
+        });
+
+        context('for numbers divisible by 11:', function () {
+            it('like 11, will include error.eleven', function () {
+                expect(validator(11)).to.include('error.eleven');
+            });
+
+            it('like 22, will include error.eleven', function () {
+                expect(validator(22)).to.include('error.eleven');
+            });
         });
     });
 });
-
-
-/// ------ Helpers
-function willInclude(error, num){
-    it('like ' + num, function(){
-        expect(validator(num)).to.include(error);
-    })
-}
